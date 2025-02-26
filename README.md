@@ -22,6 +22,9 @@
 
 # Getting Started
 ## Installation
+### Using Pixi
+Hello
+### Using Conda
 ```
 conda create -n mast3r-slam python=3.11
 conda activate mast3r-slam
