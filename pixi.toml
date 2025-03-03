@@ -17,7 +17,7 @@ install = { cmd = "pwd", depends-on = [
 ] }
 
 [pypi-options]
-no-build-isolation = ["MAST3R-SLAM", "lietorch"]
+no-build-isolation = ["MAST3R-SLAM", "lietorch", "curope", "MAST3R"]
 
 [pypi-dependencies]
 torch = { version = "==2.4.1", index = "https://download.pytorch.org/whl/cu124" }
@@ -26,8 +26,8 @@ torchcodec = { version = "==0.1.0", index = "https://download.pytorch.org/whl/cu
 MAST3R-SLAM = { path = ".", editable = true }
 lietorch = { git = "https://github.com/princeton-vl/lietorch.git" }
 simplecv = { git = "https://github.com/pablovela5620/simplecv.git" }
-# MAST3R = { path = "thirdparty/mast3r", editable = true }
-# in3d = { path = "thirdparty/in3d", editable = true }
+MAST3R = { path = "thirdparty/mast3r", editable = true }
+in3d = { path = "thirdparty/in3d", editable = true }
 
 [dependencies]
 python = "3.11.*"
