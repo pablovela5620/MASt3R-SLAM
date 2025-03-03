@@ -138,3 +138,7 @@ screen.yaml
 *.pt
 *.ini
 notebooks/*
+
+# pixi environments
+.pixi
+*.egg-info

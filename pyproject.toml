@@ -12,8 +12,8 @@ dependencies = [
     "evo",
     "natsort",
     "pykdtree",
-    "torchcodec==0.1",
-    "lietorch @ git+https://github.com/princeton-vl/lietorch.git",
+    # "torchcodec==0.1",
+    # "lietorch @ git+https://github.com/princeton-vl/lietorch.git",
 ]
 
 [tool.setuptools.packages.find]

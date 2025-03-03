@@ -28,6 +28,7 @@ from mast3r_slam.visualization_utils import (
     image_with_text,
 )
 from mast3r_slam.config import load_config, config
+from mast3r_slam.frame import SharedStates, SharedKeyframes
 
 
 @dataclasses.dataclass
@@ -316,8 +317,8 @@ class Window(WindowEvents):
             self.curr_img.texture.size[0] * scale,
             self.curr_img.texture.size[1] * scale,
         )
-        image_with_text(self.kf_img, size, "kf", same_line=False)
-        image_with_text(self.curr_img, size, "curr", same_line=False)
+        image_with_text(self.kf_img, size, "keyframe", same_line=False)
+        image_with_text(self.curr_img, size, "current image", same_line=False)
 
         imgui.end()
 
@@ -380,7 +381,9 @@ class Window(WindowEvents):
         return frame.X_canon.cpu().numpy().astype(np.float32)
 
 
-def run_visualization(states, keyframes, main2viz, viz2main, config_path) -> None:
+def run_visualization(
+    states: SharedStates, keyframes: SharedKeyframes, main2viz, viz2main, config_path
+) -> None:
     load_config(config_path)
 
     config_cls = Window

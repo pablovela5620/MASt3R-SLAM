@@ -108,7 +108,7 @@ class Frame:
         return self.C / self.N if self.C is not None else None
 
 
-def create_frame(i, img, T_WC, img_size=512, device="cuda:0"):
+def create_frame(i, img, T_WC: lietorch.Sim3, img_size: int = 512, device="cuda:0"):
     img = resize_img(img, img_size)
     rgb = img["img"].to(device=device)
     img_shape = torch.tensor(img["true_shape"], device=device)
@@ -218,7 +218,9 @@ class SharedStates:
 
 
 class SharedKeyframes:
-    def __init__(self, manager, h, w, buffer=512, dtype=torch.float32, device="cuda"):
+    def __init__(
+        self, manager, h, w, buffer: int = 512, dtype=torch.float32, device="cuda"
+    ):
         self.lock = manager.RLock()
         self.n_size = manager.Value("i", 0)
 
@@ -268,7 +270,7 @@ class SharedKeyframes:
                 kf.K = self.K
             return kf
 
-    def __setitem__(self, idx, value: Frame) -> None:
+    def __setitem__(self, idx, value: Frame):
         with self.lock:
             self.n_size.value = max(idx + 1, self.n_size.value)
 

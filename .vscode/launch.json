@@ -1,0 +1,23 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Inference for Mast3r SLAM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/rerun-test.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--dataset",
+                // "datasets/tum/rgbd_dataset_freiburg1_plant",
+                "/mnt/12tbdrive/data/.my_data/.4d-splats/splat-datasets/2024-11-02-rp-lay-floor/nerfstudio/images"
+                // "/mnt/12tbdrive/data/.my_data/.my_vids/videos/img_1615"
+                // "/mnt/12tbdrive/data/.my_data/.4d-splats/splat-datasets/2024-09-26_rp_lay_bed_frog_spread/nerfstudio/images",
+                // "--no-viz"
+            ]
+        }
+    ]
+}

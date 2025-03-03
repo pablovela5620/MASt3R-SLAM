@@ -1,4 +1,6 @@
 import queue
+from multiprocessing.managers import SyncManager
+from typing import Any
 
 
 def try_get_msg(q):
@@ -23,7 +25,7 @@ class FakeQueue:
         return True
 
 
-def new_queue(manager, use_fake=False):
+def new_queue(manager: SyncManager, use_fake: bool = False) -> FakeQueue | Any:
     if use_fake:
         return FakeQueue()
     return manager.Queue()
