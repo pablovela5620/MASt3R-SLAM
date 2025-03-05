@@ -20,7 +20,7 @@ from mast3r_slam.mast3r_utils import (
 )
 from mast3r_slam.multiprocess_utils import new_queue, try_get_msg
 from mast3r_slam.tracker import FrameTracker
-from mast3r_slam.visualization import WindowMsg, run_visualization
+from mast3r_slam.visualization import WindowMsg
 from mast3r_slam.lietorch_utils import as_SE3
 import torch.multiprocessing as mp
 from multiprocessing.managers import SyncManager
@@ -30,7 +30,7 @@ import rerun as rr
 from jaxtyping import UInt8, Float32, Int
 import numpy as np
 
-# from simplecv.rerun_log_utils import RerunTyroConfig
+from simplecv.rerun_log_utils import RerunTyroConfig
 from pathlib import Path
 
 
@@ -43,7 +43,7 @@ def format_time(seconds):
 
 @dataclass
 class InferenceConfig:
-    # rr_config: RerunTyroConfig
+    rr_config: RerunTyroConfig
     dataset: str = (
         "/home/pablo/0Dev/personal/MASt3R-SLAM/datasets/tum/rgbd_dataset_freiburg1_room"
     )
@@ -145,39 +145,15 @@ def estimate_focal_knowing_depth(
     return focal
 
 
-@rr.shutdown_at_exit
-def log_rr_frame_mp(keyframes: SharedKeyframes, states: SharedStates):
-    rr.init(application_id="mast3r_slam")
-    rr.connect_tcp()
-
-    idx = 0
-    # Check mode to know when to exit
-    while states.get_mode() != Mode.TERMINATED:
-        current_frame: Frame = states.get_frame()
-        # Add your rerun logging logic here
-        rgb_img: Float32[torch.Tensor, "H W 3"] = current_frame.uimg
-        rgb_img: UInt8[np.ndarray, "H W 3"] = (rgb_img * 255).numpy().astype(np.uint8)
-        rr.set_time_sequence(timeline="frame", sequence=idx)
-        rr.log(
-            "image",
-            rr.Image(image=rgb_img, color_model=rr.ColorModel.RGB),
-        )
-
-        idx += 1
-
-    # Clean exit when TERMINATED
-    print("ReRun visualization process exiting")
-
-
 class RerunLogger:
     def __init__(self, parent_log_path: Path):
         self.parent_log_path: Path = parent_log_path
-        rr.init(application_id="mast3r_slam")
-        rr.connect_tcp()
         rr.log(f"{self.parent_log_path}", rr.ViewCoordinates.RDF, static=True)
 
         self.path_list = []
         self.keyframe_logged_list = []
+        self.num_keyframes_logged = 0
+        self.conf_thresh = 1.5
 
     def log_frame(
         self, current_frame: Frame, keyframes: SharedKeyframes, states: SharedStates
@@ -272,7 +248,7 @@ class RerunLogger:
                     rr.Image(image=kf_img, color_model=rr.ColorModel.RGB).compress(),
                 )
                 # create a mask based on the confidence values
-                mask = keyframe.C.cpu().numpy() > 5
+                mask = keyframe.C.cpu().numpy() > self.conf_thresh
 
                 # Convert the mask from shape (h*w, 1) to shape (h*w,)
                 mask = (
@@ -312,6 +288,7 @@ class RerunLogger:
                 ),
             )
 
+        # Log the edges
         with states.lock:
             ii: Int[torch.Tensor, "num_edges"] = torch.tensor(
                 states.edges_ii, dtype=torch.long
@@ -354,8 +331,8 @@ def mast3r_slam_inference(inf_config: InferenceConfig):
     print(config)
 
     manager: SyncManager = mp.Manager()
-    main2viz = new_queue(manager, inf_config.no_viz)
-    viz2main = new_queue(manager, inf_config.no_viz)
+    main2viz = new_queue(manager, use_fake=True)
+    viz2main = new_queue(manager, use_fake=True)
 
     dataset = load_dataset(inf_config.dataset)
     dataset.subsample(config["dataset"]["subsample"])
@@ -363,13 +340,6 @@ def mast3r_slam_inference(inf_config: InferenceConfig):
     h, w = dataset.get_img_shape()[0]
     keyframes = SharedKeyframes(manager, h, w)
     states = SharedStates(manager, h, w)
-
-    if not inf_config.no_viz:
-        viz = mp.Process(
-            target=run_visualization,
-            args=(states, keyframes, main2viz, viz2main, inf_config.config),
-        )
-        viz.start()
 
     model = load_mast3r(device=device)
     model.share_memory()
@@ -454,6 +424,7 @@ def mast3r_slam_inference(inf_config: InferenceConfig):
             states.queue_global_optimization(len(keyframes) - 1)
             states.set_mode(Mode.TRACKING)
             states.set_frame(frame)
+            rr_logger.log_frame(frame, keyframes, states)
             i += 1
             continue
 

@@ -1,38 +1,33 @@
 [project]
 authors = ["pablovela5620 <pablovela5620@gmail.com>"]
-channels = ["conda-forge"]
+channels = ["https://prefix.dev/conda-forge"]
 name = "MASt3R-SLAM"
 platforms = ["linux-64"]
 version = "0.1.0"
 
 [system-requirements]
-cuda = "12.0"
+cuda = "12.4"
 
 [tasks]
-install-mast3r = { cmd = "pip install -e thirdparty/mast3r" }
-install-thirdparty-in3d = { cmd = "pip install -e thirdparty/in3d" }
-install = { cmd = "pwd", depends-on = [
+install-lietorch = { cmd = "python -m pip install git+https://github.com/princeton-vl/lietorch.git" }
+install-mast3r = { cmd = "python -m pip install -e thirdparty/mast3r" }
+install = { cmd = "python -m pip install --no-build-isolation -e . ", depends-on = [
     "install-mast3r",
-    "install-thirdparty-in3d",
 ] }
 
-[pypi-options]
-no-build-isolation = ["MAST3R-SLAM", "lietorch"]
 
 [pypi-dependencies]
-torch = { version = "==2.4.1", index = "https://download.pytorch.org/whl/cu124" }
-torchvision = { version = "==0.19.1", index = "https://download.pytorch.org/whl/cu124" }
-torchcodec = { version = "==0.1.0", index = "https://download.pytorch.org/whl/cu124" }
-MAST3R-SLAM = { path = ".", editable = true }
-lietorch = { git = "https://github.com/princeton-vl/lietorch.git" }
+torch = { version = "==2.5.1", index = "https://download.pytorch.org/whl/cu124" }
+torchvision = { version = "==0.20.1", index = "https://download.pytorch.org/whl/cu124" }
+# torchcodec = { version = "==0.1.0", index = "https://download.pytorch.org/whl/cu124" }
+lietorch = { url = "https://huggingface.co/datasets/pablovela5620/mast3r-slam-whls/resolve/main/lietorch-0.2-cp311-cp311-linux_x86_64.whl" }
 simplecv = { git = "https://github.com/pablovela5620/simplecv.git" }
-# MAST3R = { path = "thirdparty/mast3r", editable = true }
-# in3d = { path = "thirdparty/in3d", editable = true }
 
 [dependencies]
 python = "3.11.*"
 numpy = "<2"
-cuda-version = "12.4"
+cuda-nvcc = "12.4.*"
+cuda-version = "12.4.*"
 ffmpeg = ">=7.1.0,<8"
 pip = ">=25.0.1,<26"
 tyro = ">=0.9.1,<0.10"

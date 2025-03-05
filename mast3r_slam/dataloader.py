@@ -10,7 +10,11 @@ import yaml
 from mast3r_slam.mast3r_utils import resize_img
 from mast3r_slam.config import config
 
-from torchcodec.decoders import VideoDecoder
+HAS_TORCHCODEC = True
+try:
+    from torchcodec.decoders import VideoDecoder
+except Exception as e:
+    HAS_TORCHCODEC = False
 
 
 class MonocularDataset(torch.utils.data.Dataset):
@@ -147,7 +151,6 @@ class SevenScenesDataset(MonocularDataset):
 class RealsenseDataset(MonocularDataset):
     def __init__(self):
         super().__init__()
-        self.use_calibration = False
         self.dataset_path = None
         self.pipeline = rs.pipeline()
         # self.h, self.w = 720, 1280
@@ -166,6 +169,20 @@ class RealsenseDataset(MonocularDataset):
             self.profile.get_stream(rs.stream.color)
         )
         self.save_results = False
+
+        if self.use_calibration:
+            rgb_intrinsics = self.rgb_profile.get_intrinsics()
+            self.camera_intrinsics = Intrinsics.from_calib(
+                self.img_size,
+                self.w,
+                self.h,
+                [
+                    rgb_intrinsics.fx,
+                    rgb_intrinsics.fy,
+                    rgb_intrinsics.ppx,
+                    rgb_intrinsics.ppy,
+                ],
+            )
 
     def __len__(self):
         return 999999
@@ -216,19 +233,32 @@ class MP4Dataset(MonocularDataset):
         super().__init__()
         self.use_calibration = False
         self.dataset_path = pathlib.Path(dataset_path)
-        self.decoder = VideoDecoder(str(self.dataset_path))
-        self.fps = self.decoder.metadata.average_fps
-        self.total_frames = self.decoder.metadata.num_frames
-        self.save_results = False
+        if HAS_TORCHCODEC:
+            self.decoder = VideoDecoder(str(self.dataset_path))
+            self.fps = self.decoder.metadata.average_fps
+            self.total_frames = self.decoder.metadata.num_frames
+        else:
+            print("torchcodec is not installed. This may slow down the dataloader")
+            self.cap = cv2.VideoCapture(str(self.dataset_path))
+            self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+            self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
         self.stride = config["dataset"]["subsample"]
 
     def __len__(self):
         return self.total_frames // self.stride
 
     def read_img(self, idx):
-        img = self.decoder[idx]  # c,h,w
-        img = img.permute(1, 2, 0)
-        img = img.numpy()
+        if HAS_TORCHCODEC:
+            img = self.decoder[idx * self.stride]  # c,h,w
+            img = img.permute(1, 2, 0)
+            img = img.numpy()
+        else:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, idx * self.stride)
+            ret, img = self.cap.read()
+            if not ret:
+                raise ValueError("Failed to read image")
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(self.dtype)
         timestamp = idx / self.fps
         self.timestamps.append(timestamp)
@@ -239,8 +269,6 @@ class RGBFiles(MonocularDataset):
     def __init__(self, dataset_path):
         super().__init__()
         self.use_calibration = False
-        self.save_results = False
-
         self.dataset_path = pathlib.Path(dataset_path)
         self.rgb_files = natsorted(list((self.dataset_path).glob("*.png")))
         self.timestamps = np.arange(0, len(self.rgb_files)).astype(self.dtype) / 30.0
